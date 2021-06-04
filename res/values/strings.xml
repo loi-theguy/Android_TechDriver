@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">DoAn2</string>
+    <string name="default_value">0</string>
+    <string name="api_key">AIzaSyDjGEhGe_gdKcRP1u6iNz2_kUiFynpvUDE</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="home">Trang chủ</string>
+    <string name="history">Lịch sử</string>
+    <string name="account">Tài khoản</string>
+    <string name="bank">Ngân hàng</string>
+    <string name="km_count">Số km: </string>
+    <string name="price">Số tiền: </string>
+    <string name="booking">Đặt xe</string>
+    <string name="current_position">Vị trí hiện tại</string>
+    <string name="destinate_position">Điểm đến</string>
+    <string name="go">Khởi hành</string>
+</resources>
