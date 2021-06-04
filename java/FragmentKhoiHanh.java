@@ -7,6 +7,8 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ImageView;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -15,6 +17,9 @@ import android.view.ViewGroup;
  */
 public class FragmentKhoiHanh extends Fragment {
 
+    private FragmentMap fragmentMap;
+    private EditText etCurrentPos, etDestinationPos;
+    private ImageView btnSetStartPoint, btnSetDestinationPoint;
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
@@ -26,6 +31,7 @@ public class FragmentKhoiHanh extends Fragment {
 
     public FragmentKhoiHanh() {
         // Required empty public constructor
+        fragmentMap =new FragmentMap();
     }
 
     /**
@@ -59,10 +65,39 @@ public class FragmentKhoiHanh extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
+        View view=inflater.inflate(R.layout.fragment_khoi_hanh, container, false);
         getChildFragmentManager()
                 .beginTransaction()
-                .replace(R.id.KhoiHanh_mapPlacer,(Fragment)new FragmentMap())
+                .replace(R.id.KhoiHanh_mapPlacer,(Fragment) fragmentMap)
                 .commit();
-        return inflater.inflate(R.layout.fragment_khoi_hanh, container, false);
+        etCurrentPos=view.findViewById(R.id.KhoiHanh_etCurrentPos);
+        etDestinationPos = view.findViewById(R.id.KhoiHanh_etDestPos);
+        btnSetStartPoint=view.findViewById(R.id.KhoiHanh_btnSetStartPoint);
+        btnSetDestinationPoint=view.findViewById(R.id.KhoiHanh_btnSetDestinationPoint);
+        MapHelper mapHelper=fragmentMap.getMapHelper();
+        View.OnClickListener listener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int id = v.getId();
+                switch (id) {
+                    case R.id.KhoiHanh_btnSetStartPoint:
+                        if (mapHelper.hasPlacedMarker()) {
+                            etCurrentPos.setText(String.valueOf(mapHelper.getCurrentLatitude()) + "," + String.valueOf(mapHelper.getCurrentLongitude()));
+                            mapHelper.setStartMarker();
+                        }
+                        break;
+                    case R.id.KhoiHanh_btnSetDestinationPoint:
+                        if (mapHelper.hasPlacedMarker()) {
+                            etDestinationPos.setText(String.valueOf(mapHelper.getCurrentLatitude()) + "," + String.valueOf(mapHelper.getCurrentLongitude()));
+                            mapHelper.setDestinationMarker();
+                        }
+                        break;
+                }
+            }
+        };
+
+        btnSetStartPoint.setOnClickListener(listener);
+        btnSetDestinationPoint.setOnClickListener(listener);
+        return  view;
     }
 }

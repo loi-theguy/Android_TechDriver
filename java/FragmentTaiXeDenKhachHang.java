@@ -7,6 +7,8 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ImageView;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -24,8 +26,13 @@ public class FragmentTaiXeDenKhachHang extends Fragment {
     private String mParam1;
     private String mParam2;
 
+    private FragmentMap fragmentMap;
+    private EditText etCurrentPos, etDestinationPos;
+    private ImageView btnSetStartPoint, btnSetDestinationPoint;
+
     public FragmentTaiXeDenKhachHang() {
         // Required empty public constructor
+        fragmentMap =new FragmentMap();
     }
 
     /**
@@ -60,9 +67,38 @@ public class FragmentTaiXeDenKhachHang extends Fragment {
                              Bundle savedInstanceState) {
         getChildFragmentManager()
                 .beginTransaction()
-                .replace(R.id.TXKH_mapPlacer,(Fragment)new FragmentMap())
+                .replace(R.id.TXKH_mapPlacer,(Fragment) fragmentMap)
                 .commit();
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_tai_xe_den_khach_hang, container, false);
+        View view= inflater.inflate(R.layout.fragment_tai_xe_den_khach_hang, container, false);
+
+        etCurrentPos=view.findViewById(R.id.TXKH_etCurrentPos);
+        etDestinationPos = view.findViewById(R.id.TXKH_etDestPos);
+        btnSetStartPoint=view.findViewById(R.id.TXKH_btnSetStartPoint);
+        btnSetDestinationPoint=view.findViewById(R.id.TXKH_btnSetDestinationPoint);
+        MapHelper mapHelper= fragmentMap.getMapHelper();
+        View.OnClickListener listener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int id = v.getId();
+                switch (id) {
+                    case R.id.TXKH_btnSetStartPoint:
+                        if (mapHelper.hasPlacedMarker()) {
+                            etCurrentPos.setText(String.valueOf(mapHelper.getCurrentLatitude()) + "," + String.valueOf(mapHelper.getCurrentLongitude()));
+                            mapHelper.setStartMarker();
+                        }
+                        break;
+                    case R.id.TXKH_btnSetDestinationPoint:
+                        if (mapHelper.hasPlacedMarker()) {
+                            etDestinationPos.setText(String.valueOf(mapHelper.getCurrentLatitude()) + "," + String.valueOf(mapHelper.getCurrentLongitude()));
+                            mapHelper.setDestinationMarker();
+                        }
+                        break;
+                }
+            }
+        };
+        btnSetStartPoint.setOnClickListener(listener);
+        btnSetDestinationPoint.setOnClickListener(listener);
+        return view;
     }
 }

@@ -8,6 +8,9 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -17,6 +20,11 @@ import android.view.ViewGroup;
 public class FragmentDatXe extends Fragment {
 
     private Context context;
+    private FragmentMap fragmentMap;
+    private ImageView btnSetStartingPoint, btnSetDestinationPoint;
+    private EditText etCurrentPos, etDestPos;
+    private TextView tvKilometer, tvPrice;
+//    SharedPreferences preferences= getActivity().getSharedPreferences(MainActivity.PREF_NAME, Context.MODE_PRIVATE);
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
@@ -28,6 +36,7 @@ public class FragmentDatXe extends Fragment {
 
     public FragmentDatXe() {
         // Required empty public constructor
+        fragmentMap =new FragmentMap();
     }
 
     /**
@@ -64,9 +73,47 @@ public class FragmentDatXe extends Fragment {
         View view=inflater.inflate(R.layout.fragment_dat_xe, container, false);
         getChildFragmentManager()
                 .beginTransaction()
-                .replace(R.id.DatXe_mapPlacer,(Fragment)new FragmentMap())
+                .replace(R.id.DatXe_mapPlacer,(Fragment) fragmentMap)
                 .commit();
         context=view.getContext();
+        btnSetDestinationPoint = view.findViewById(R.id.DatXe_btnSetDestinationPoint);
+        btnSetStartingPoint = view.findViewById(R.id.DatXe_btnSetStartingPoint);
+        etCurrentPos = view.findViewById(R.id.DatXe_etCurrentPos);
+        etDestPos = view.findViewById(R.id.DatXe_etDestPos);
+        tvKilometer = view.findViewById(R.id.DatXe_tvKilometer);
+        tvPrice = view.findViewById(R.id.DatXe_tvPrice);
+        MapHelper mapHelper=fragmentMap.getMapHelper();
+        try{
+            mapHelper.setKilometersDisplayingControl(tvKilometer);
+        } catch(Exception e)
+        {
+            e.printStackTrace();
+        }
+//        fragmentMap.enableKmDisplaying();
+        mapHelper.setPricesDisplayingControl(tvPrice);
+//        fragmentMap.enablePriceDisplaying();
+        View.OnClickListener listener= new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int id=v.getId();
+                switch(id) {
+                    case R.id.DatXe_btnSetStartingPoint:
+                        if(mapHelper.hasPlacedMarker()) {
+                            etCurrentPos.setText(String.valueOf(mapHelper.getCurrentLatitude()) + "," + String.valueOf(mapHelper.getCurrentLongitude()));
+                            mapHelper.setStartMarker();
+                        }
+                        break;
+                    case R.id.DatXe_btnSetDestinationPoint:
+                        if(mapHelper.hasPlacedMarker()){
+                            etDestPos.setText(String.valueOf(mapHelper.getCurrentLatitude()) + "," + String.valueOf(mapHelper.getCurrentLongitude()));
+                            mapHelper.setDestinationMarker();
+                        }
+                        break;
+                }
+            }
+        };
+        btnSetStartingPoint.setOnClickListener(listener);
+        btnSetDestinationPoint.setOnClickListener(listener);
         return view;
     }
 }
