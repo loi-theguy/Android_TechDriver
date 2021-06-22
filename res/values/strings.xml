@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">DoAn2</string>
     <string name="default_value">0</string>
-    <string name="api_key">AIzaSyDjGEhGe_gdKcRP1u6iNz2_kUiFynpvUDE</string>
+    <string name="api_key">YOUR API KEY</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="home">Trang chủ</string>
@@ -14,4 +14,9 @@
     <string name="current_position">Vị trí hiện tại</string>
     <string name="destinate_position">Điểm đến</string>
     <string name="go">Khởi hành</string>
+    <string name="confirm_ride">Xác nhận chuyến đi thành công</string>
+    <string name="not_enough_balance">Bạn không đủ số dư để đặt chuyến xe, vui lòng nạp thêm tiền!</string>
+    <string name="order_success">Đặt xe thành công!</string>
+    <string name="no_rider">Không có tài xế phù hợp</string>
+    <string name="ride_completed">Hoàn thành chuyến đi!</string>
 </resources>
