@@ -8,9 +8,15 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -18,12 +24,23 @@ import android.widget.TextView;
  * create an instance of this fragment.
  */
 public class FragmentDatXe extends Fragment {
-
+    //TODO: truyền giá trị khKey(mã/key của khách hàng đã đăng nhập) qua hàm initData()
+    private final double INFINITE=1e9;
     private Context context;
     private FragmentMap fragmentMap;
     private ImageView btnSetStartingPoint, btnSetDestinationPoint;
     private EditText etCurrentPos, etDestPos;
     private TextView tvKilometer, tvPrice;
+    private Button btnPlaceOrder;
+    private MapHelper mapHelper;
+    private String khKey;
+    private KhachHang kh;
+    private KhachHangDBHelper khHelper;
+    private DoiTacDBHelper dtHelper;
+    private ChuyenDiDBHelper cdHelper;
+    private DatabaseStatus<KhachHang> khStatus;
+    private DatabaseStatus<DoiTac> dtStatus;
+    private DoiTac doiTac;
 //    SharedPreferences preferences= getActivity().getSharedPreferences(MainActivity.PREF_NAME, Context.MODE_PRIVATE);
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -64,6 +81,7 @@ public class FragmentDatXe extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+        initData();
     }
 
     @Override
@@ -82,13 +100,10 @@ public class FragmentDatXe extends Fragment {
         etDestPos = view.findViewById(R.id.DatXe_etDestPos);
         tvKilometer = view.findViewById(R.id.DatXe_tvKilometer);
         tvPrice = view.findViewById(R.id.DatXe_tvPrice);
-        MapHelper mapHelper=fragmentMap.getMapHelper();
-        try{
-            mapHelper.setKilometersDisplayingControl(tvKilometer);
-        } catch(Exception e)
-        {
-            e.printStackTrace();
-        }
+        btnPlaceOrder=view.findViewById(R.id.DatXe_btnPlaceOrder);
+
+        mapHelper=fragmentMap.getMapHelper();
+        mapHelper.setKilometersDisplayingControl(tvKilometer);
 //        fragmentMap.enableKmDisplaying();
         mapHelper.setPricesDisplayingControl(tvPrice);
 //        fragmentMap.enablePriceDisplaying();
@@ -98,14 +113,40 @@ public class FragmentDatXe extends Fragment {
                 int id=v.getId();
                 switch(id) {
                     case R.id.DatXe_btnSetStartingPoint:
+                        if(!etCurrentPos.getText().toString().isEmpty())
+                        {
+                            MapHelper.OnPostGettingAddressJob onPostGettingAddressJob =new MapHelper.OnPostGettingAddressJob() {
+                                @Override
+                                public void updateCurrentLocation(Place place) {
+                                    etCurrentPos.setText(place.getAddress());
+                                    mapHelper.setStartMarker();
+                                    setKHPlace(place);
+                                }
+                            };
+                            getLocationFromAddress(onPostGettingAddressJob,etCurrentPos);
+                            return;
+                        }
                         if(mapHelper.hasPlacedMarker()) {
-                            etCurrentPos.setText(String.valueOf(mapHelper.getCurrentLatitude()) + "," + String.valueOf(mapHelper.getCurrentLongitude()));
+                            etCurrentPos.setText(mapHelper.getCurrentPlace().getAddress());
                             mapHelper.setStartMarker();
                         }
+                        setKHPlace(mapHelper.getCheckpoints()[0]);
                         break;
                     case R.id.DatXe_btnSetDestinationPoint:
+                        if(!etDestPos.getText().toString().isEmpty())
+                        {
+                            MapHelper.OnPostGettingAddressJob onPostGettingAddressJob =new MapHelper.OnPostGettingAddressJob() {
+                                @Override
+                                public void updateCurrentLocation(Place place) {
+                                    etDestPos.setText(place.getAddress());
+                                    mapHelper.setDestinationMarker();
+                                }
+                            };
+                            getLocationFromAddress(onPostGettingAddressJob,etDestPos);
+                            return;
+                        }
                         if(mapHelper.hasPlacedMarker()){
-                            etDestPos.setText(String.valueOf(mapHelper.getCurrentLatitude()) + "," + String.valueOf(mapHelper.getCurrentLongitude()));
+                            etDestPos.setText(mapHelper.getCurrentPlace().getAddress());
                             mapHelper.setDestinationMarker();
                         }
                         break;
@@ -114,6 +155,202 @@ public class FragmentDatXe extends Fragment {
         };
         btnSetStartingPoint.setOnClickListener(listener);
         btnSetDestinationPoint.setOnClickListener(listener);
+        btnPlaceOrder.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                double soDu, tongTien;
+                String temp=tvPrice.getText().toString();
+                tongTien=Double.valueOf(temp.substring(0,temp.length()-4));
+                soDu=Double.valueOf(kh.getSoTien());
+                if(soDu>=tongTien)
+                {
+                    //dat chuyen di
+                    Toast.makeText(getContext(),getString(R.string.order_success),Toast.LENGTH_LONG).show();
+                    kh.setSoTien(String.valueOf(soDu-tongTien));
+                    khHelper.update(khStatus, khKey,kh);
+                    String dtKey=getNearestDoiTac();
+                    if(dtKey.isEmpty())
+                    {
+                        Toast.makeText(getContext(),getString(R.string.no_rider),Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    updateDTStatus(dtKey,doiTac);
+                    createChuyenDi(dtKey);
+                    return;
+                }
+                Toast.makeText(getContext(), getString(R.string.not_enough_balance),Toast.LENGTH_LONG).show();
+            }
+        });
         return view;
+    }
+
+    private void getLocationFromAddress(final MapHelper.OnPostGettingAddressJob onPostGettingAddressJob, EditText et)
+    {
+        String searchString=et.getText().toString();
+        mapHelper.getLocationFromAddress(onPostGettingAddressJob,searchString);
+    }
+
+    private void initData()
+    {
+        khKey ="-Mch5htwZf1jXrhQUzJ0";
+        khHelper=new KhachHangDBHelper();
+        //get data from KhachHang
+        khStatus =new DatabaseStatus<KhachHang>() {
+            @Override
+            public void doWhenInserted() {
+
+            }
+
+            @Override
+            public void doWhenRead(ArrayList<KhachHang> data, ArrayList<String> keys) {
+                for(int i=0;i<keys.size();i++)
+                    if(keys.get(i).equals(khKey))
+                    {
+                        kh=data.get(i);
+                        return;
+                    }
+            }
+
+            @Override
+            public void doWhenUpdated() {
+
+            }
+
+            @Override
+            public void doWhenDeleted() {
+
+            }
+        };
+        khHelper.read(khStatus);
+        //get data from DoiTac
+        dtHelper = new DoiTacDBHelper();
+        dtStatus=new DatabaseStatus<DoiTac>() {
+            @Override
+            public void doWhenInserted() {
+
+            }
+
+            @Override
+            public void doWhenRead(ArrayList<DoiTac> data, ArrayList<String> keys) {
+
+            }
+
+            @Override
+            public void doWhenUpdated() {
+
+            }
+
+            @Override
+            public void doWhenDeleted() {
+
+            }
+        };
+        dtHelper.read(dtStatus);
+        cdHelper=new ChuyenDiDBHelper();
+    }
+    private double getEuclerDistance(Place p1, Place p2)
+    {
+        return Math.sqrt(Math.pow(p1.getLatitude()-p2.getLatitude(),2)+Math.pow(p1.getLongitude()-p2.getLongitude(),2));
+    }
+
+    private String getNearestDoiTac()
+    {
+        ArrayList<DoiTac> doiTacs=dtHelper.getDoiTacs();
+        ArrayList<String> dtKeys=dtHelper.getKeys();
+        String key="";
+        double min=INFINITE;
+        doiTac=null;
+        for(int i=0;i<dtKeys.size();i++)
+        {
+            Place pKH, pDT;
+            try {
+                pKH = new Place(Double.valueOf(kh.getViDoHienTai()), Double.valueOf(kh.getKinhDoHienTai()), "");
+                pDT = new Place(Double.valueOf(doiTacs.get(i).getViDoHienTai()), Double.valueOf(doiTacs.get(i).getKinhDoHienTai()), "");
+            }catch(NumberFormatException e)
+            {
+                continue;
+            }
+            double distance=getEuclerDistance(pKH,pDT);
+            if(distance<min && doiTacs.get(i).getDangBan().equals(DoiTac.KHONG_BAN))
+            {
+                key=dtKeys.get(i);
+                doiTac=doiTacs.get(i);
+                min=distance;
+            }
+        }
+        return key;
+    }
+
+    private void setKHPlace(Place place)
+    {
+        kh.setViDoHienTai(String.valueOf(place.getLatitude()));
+        kh.setKinhDoHienTai(String.valueOf(place.getLongitude()));
+        khHelper.update(new DatabaseStatus<KhachHang>() {
+            @Override
+            public void doWhenInserted() {
+
+            }
+
+            @Override
+            public void doWhenRead(ArrayList<KhachHang> data, ArrayList<String> keys) {
+
+            }
+
+            @Override
+            public void doWhenUpdated() {
+
+            }
+
+            @Override
+            public void doWhenDeleted() {
+
+            }
+        },khKey,kh);
+    }
+
+    private void createChuyenDi(String dtKey)
+    {
+        ChuyenDi chuyenDi=new ChuyenDi();
+        chuyenDi.setDiemBatDau(etCurrentPos.getText().toString());
+        chuyenDi.setDiemDen(etDestPos.getText().toString());
+        chuyenDi.setViDoDiemBatDau(kh.getViDoHienTai());
+        chuyenDi.setKinhDoDiemBatDau(kh.getKinhDoHienTai());
+        chuyenDi.setViDoDiemDen(String.valueOf(mapHelper.getCheckpoints()[1].getLatitude()));
+        chuyenDi.setKinhDoDiemDen(String.valueOf(mapHelper.getCheckpoints()[1].getLongitude()));
+        chuyenDi.setThoiGianBatDau(ChuyenDi.NOT_APPLICABLE);
+        chuyenDi.setSoKm(tvKilometer.getText().toString());
+        String giaTien=tvPrice.getText().toString();
+        giaTien=giaTien.substring(0,giaTien.length()-4);
+        chuyenDi.setGiaTien(giaTien);
+        chuyenDi.setMaKhachHang(khKey);
+        chuyenDi.setMaDoiTac(dtKey);
+        chuyenDi.setTrangThai(ChuyenDi.CHUA_HOAN_THANH);
+        chuyenDi.setThoiGianKetThuc(ChuyenDi.NOT_APPLICABLE);
+        cdHelper.insert(new DatabaseStatus<ChuyenDi>() {
+            @Override
+            public void doWhenInserted() {
+
+            }
+
+            @Override
+            public void doWhenRead(ArrayList<ChuyenDi> data, ArrayList<String> keys) {
+
+            }
+
+            @Override
+            public void doWhenUpdated() {
+
+            }
+
+            @Override
+            public void doWhenDeleted() {
+
+            }
+        },chuyenDi);
+    }
+    private void updateDTStatus(String dtKey, DoiTac doiTac)
+    {
+        doiTac.setDangBan(DoiTac.BAN);
+        dtHelper.update(dtStatus, dtKey,doiTac);
     }
 }

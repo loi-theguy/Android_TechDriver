@@ -1,4 +1,6 @@
 package com.example.doan2;
+import android.util.Log;
+
 import com.google.android.gms.maps.model.LatLng;
 
 import org.json.JSONArray;
@@ -111,5 +113,47 @@ public class DirectionsJSONParser {
         }
 
         return poly;
+    }
+    public Place getPlace(String jsonData)
+    {
+        JSONObject jsonObject;
+        try {
+            jsonObject=new JSONObject(jsonData);
+        } catch (JSONException e) {
+            Log.e("JSON_CASTING_FAIL",e.getMessage());
+            return null;
+        }
+        try {
+            JSONArray jCandidates=jsonObject.getJSONArray("candidates");
+            JSONObject jGeometry= ((JSONObject)jCandidates.get(0)).getJSONObject("geometry");
+            String address=((JSONObject)jCandidates.get(0)).getString("formatted_address");
+            JSONObject jLocation=jGeometry.getJSONObject("location");
+            Place place=new Place();
+            place.setLatitude(jLocation.getDouble("lat"));
+            place.setLongitude(jLocation.getDouble("lng"));
+            place.setAddress(address);
+            return place;
+        } catch (JSONException e) {
+            Log.e("NO_CHILD_JSONOBJ",e.getMessage());
+        }
+        return null;
+    }
+    public String getPlaceFromLatLng(String jsonData)
+    {
+        JSONObject jsonObject;
+        try {
+            jsonObject=new JSONObject(jsonData);
+        } catch (JSONException e) {
+            Log.e("JSON_CASTING_FAIL",e.getMessage());
+            return null;
+        }
+        try {
+            JSONArray jResults=jsonObject.getJSONArray("results");
+            String address=((JSONObject)jResults.get(0)).getString("formatted_address");
+            return address;
+        } catch (JSONException e) {
+            Log.e("NO_CHILD_JSONOBJ",e.getMessage());
+        }
+        return null;
     }
 }
