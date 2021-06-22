@@ -34,19 +34,35 @@ public class MapHelper {
     private GoogleMap map;
     private final double initialFee=12000;
     private final double additionalFee=3400;
-    private LatLng HoChiMinhCity;
+    private LatLng initialLocation;
     private double travelDuration;
     private TextView tvKilometer, tvPrice;
     private double currentRouteLength;
     private boolean isMarkerPlaced;
-    private double currentLongitude, currentLatitude;
+    private Place currentPlace;
     private Marker currentMarker, destinationMarker, startMarker;
     private Polyline currentRoute;
     private OnMapReadyCallback callback;
+    private int zoomLevel;
+    private Place[] checkpoints=new Place[2];
 
     public double getTravelDuration()
     {
         return travelDuration;
+    }
+
+    public void setInitialLocation(LatLng initialLocation) {
+        this.initialLocation = initialLocation;
+    }
+
+    public Place[] getCheckpoints() {
+        return checkpoints;
+    }
+
+    public Place getCurrentPlace(){ return currentPlace; }
+
+    public void setCurrentPlace(Place currentPlace) {
+        this.currentPlace = currentPlace;
     }
 
     public void setPricesDisplayingControl(TextView tvPrice) {
@@ -63,14 +79,6 @@ public class MapHelper {
         return currentRouteLength;
     }
 
-    public double getCurrentLongitude() {
-        return currentLongitude;
-    }
-
-    public double getCurrentLatitude() {
-        return currentLatitude;
-    }
-
     public Context getContext() {
         return context;
     }
@@ -83,24 +91,51 @@ public class MapHelper {
     {
         isMarkerPlaced=false;
         tvPrice=null;
+        zoomLevel=18;
         tvKilometer=null;
+        currentPlace=new Place();
         currentRouteLength=0;
         currentRoute=null;
-        HoChiMinhCity=new LatLng(10.762622,106.660172);
+        initialLocation =new LatLng(10.762622,106.660172);
         callback = new OnMapReadyCallback() {
             @Override
             public void onMapReady(GoogleMap googleMap) {
                 map=googleMap;
-                currentMarker= googleMap.addMarker(new MarkerOptions().position(HoChiMinhCity).title("TP Ho Chi Minh"));
-                googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(HoChiMinhCity,18));
+                BackgroundJob backgroundJob=new BackgroundJob() {
+                    @Override
+                    public String getData(String url) {
+                        try {
+                            return downloadData(url);
+                        } catch (IOException e) {
+                            Log.e("GETTING_PLACE_FAIL",e.getMessage());
+                        }
+                        return null;
+                    }
+
+                    @Override
+                    public void doOnPostExecute(String result) {
+                        DirectionsJSONParser parser=new DirectionsJSONParser();
+                        String address=parser.getPlaceFromLatLng(result);
+                        currentPlace.setAddress(address);
+                        currentMarker.remove();
+                        currentMarker = googleMap.addMarker(new MarkerOptions()
+                                .position(new LatLng(currentPlace.getLatitude(),currentPlace.getLongitude()))
+                                .title(address));
+                        currentMarker.showInfoWindow();
+                    }
+                };
+                currentMarker= googleMap.addMarker(new MarkerOptions().position(initialLocation).title("TP Ho Chi Minh"));
+                googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(initialLocation,18));
                 googleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
                     @Override
                     public void onMapClick(LatLng latLng) {
                         isMarkerPlaced=true;
-                        currentLongitude =latLng.longitude;
-                        currentLatitude =latLng.latitude;
-                        currentMarker.remove();
-                        currentMarker = googleMap.addMarker(new MarkerOptions().position(new LatLng(currentLatitude,currentLongitude)).title("Diem duoc chon"));
+                        currentPlace.setLongitude(latLng.longitude);
+                        currentPlace.setLatitude(latLng.latitude);
+                        //update the current marker on the map
+                        BackgroundTask backgroundTask=new BackgroundTask();
+                        backgroundTask.job=backgroundJob;
+                        backgroundTask.execute(getPlaceUrl(currentPlace.getLatitude(),currentPlace.getLongitude()));
                     }
                 });
             }
@@ -140,42 +175,68 @@ public class MapHelper {
     }
     public void setStartMarker()
     {
+        checkpoints[0]=new Place(currentPlace);
         currentMarker.remove();
         if(startMarker!=null) startMarker.remove();
-        startMarker=map.addMarker(new MarkerOptions().position(new LatLng(currentLatitude,currentLongitude)).title("Diem bat dau"));
+        startMarker=map.addMarker(new MarkerOptions()
+                .position(new LatLng(currentPlace.getLatitude(),currentPlace.getLongitude()))
+                .title(currentPlace.getAddress()));
         if(destinationMarker != null) drawRoute();
+        else moveCameraToCurrentMarker();
         reset();
     }
-    public void setStartMarker(double latitude, double longitude)
-    {
-        currentMarker.remove();
-        if(startMarker!=null) startMarker.remove();
-        startMarker=map.addMarker(new MarkerOptions().position(new LatLng(latitude,longitude)).title("Diem bat dau"));
-        if(destinationMarker != null) drawRoute();
-        reset();
-    }
+//    public void setStartMarker(double latitude, double longitude)
+//    {
+//        currentMarker.remove();
+//        if(startMarker!=null) startMarker.remove();
+//        startMarker=map.addMarker(new MarkerOptions().position(new LatLng(latitude,longitude)).title("Diem bat dau"));
+//        if(destinationMarker != null) drawRoute();
+//        reset();
+//    }
     public void setDestinationMarker()
     {
+        checkpoints[1]=new Place(currentPlace);
         currentMarker.remove();
         if(destinationMarker!=null) destinationMarker.remove();
-        destinationMarker=map.addMarker(new MarkerOptions().position(new LatLng(currentLatitude,currentLongitude)).title("Diem den"));
+        destinationMarker=map.addMarker(new MarkerOptions()
+                .position(new LatLng(currentPlace.getLatitude(),currentPlace.getLongitude()))
+                .title(currentPlace.getAddress()));
         if(startMarker != null) drawRoute();
+        else moveCameraToCurrentMarker();
         reset();
     }
-    public void setDestinationMarker(double latitude, double longitude)
-    {
-        currentMarker.remove();
-        if(destinationMarker!=null) destinationMarker.remove();
-        destinationMarker=map.addMarker(new MarkerOptions().position(new LatLng(latitude,longitude)).title("Diem den"));
-        if(startMarker != null) drawRoute();
-        reset();
-    }
+//    public void setDestinationMarker(double latitude, double longitude)
+//    {
+//        currentMarker.remove();
+//        if(destinationMarker!=null) destinationMarker.remove();
+//        destinationMarker=map.addMarker(new MarkerOptions().position(new LatLng(latitude,longitude)).title("Diem den"));
+//        if(startMarker != null) drawRoute();
+//        reset();
+//    }
 
     public void drawRoute()
     {
         String url=getDirectionUrl();
-        MapHelper.DownloadTask downloadTask=new MapHelper.DownloadTask();
-        downloadTask.execute(url);
+        BackgroundTask backgroundTask =new BackgroundTask();
+        backgroundTask.job=new BackgroundJob() {
+            @Override
+            public String getData(String url) {
+                try {
+                    return downloadData(url);
+                } catch (IOException e) {
+                    Log.e("ROUTING_FAIL",e.getMessage());
+                }
+                return null;
+            }
+
+            @Override
+            public void doOnPostExecute(String result) {
+                MapHelper.ParserTask parserTask = new MapHelper.ParserTask();
+                // Invokes the thread for parsing the JSON data
+                parserTask.execute(result);
+            }
+        };
+        backgroundTask.execute(url);
     }
 
     private String getDirectionUrl()
@@ -193,7 +254,7 @@ public class MapHelper {
         return "https://maps.googleapis.com/maps/api/directions/"+output+"?"+parameters;
     }
 
-    private String getRouteData(String strUrl) throws IOException
+    private String downloadData(String strUrl) throws IOException
     {
         String data="";
         InputStream inputStream=null;
@@ -221,9 +282,18 @@ public class MapHelper {
         }
         return data;
     }
-
+    private interface BackgroundJob
+    {
+        String getData(String url);
+        void doOnPostExecute(String result);
+    }
+    public interface OnPostGettingAddressJob
+    {
+        void updateCurrentLocation(Place place);
+    }
     //a class to download data in background
-    private class DownloadTask extends AsyncTask<String, Void, String> {
+    private class BackgroundTask extends AsyncTask<String, Void, String> {
+        public BackgroundJob job;
         @Override
         protected String doInBackground(String... url) {
 
@@ -233,7 +303,8 @@ public class MapHelper {
 
             try{
                 // Fetching the data from web service
-                data = getRouteData(url[0]);
+//                data = getRouteData(url[0]);
+                data=job.getData(url[0]);
             }catch(Exception e){
                 Log.d("Background Task",e.toString());
             }
@@ -245,11 +316,12 @@ public class MapHelper {
         @Override
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
-
-            MapHelper.ParserTask parserTask = new MapHelper.ParserTask();
-
-            // Invokes the thread for parsing the JSON data
-            parserTask.execute(result);
+//
+//            MapHelper.ParserTask parserTask = new MapHelper.ParserTask();
+//
+//            // Invokes the thread for parsing the JSON data
+//            parserTask.execute(result);
+            job.doOnPostExecute(result);
         }
     }
 
@@ -268,6 +340,7 @@ public class MapHelper {
                 // Starts parsing data
                 routes = parser.parse(jObject);
                 currentRouteLength=parser.getTotalLength();
+                setZoomLevel();
                 travelDuration=parser.getTravelDuration();
             }catch(Exception e){
                 e.printStackTrace();
@@ -318,12 +391,95 @@ public class MapHelper {
             {
                 Toast.makeText(context, "Failed to draw route. Error: "+e.toString(), Toast.LENGTH_LONG).show();
             }
+            moveCameraToCurrentMarker();
         }
     }
 
-    public String getLocationAddress(double latitude, double longitude)
+    private void setZoomLevel()
     {
-        String address="";
-        return address;
+        double distance=currentRouteLength/1000;
+        if(distance>1600)
+        {
+            zoomLevel=3;
+            return;
+        }
+        if(distance>800)
+        {
+            zoomLevel=4;
+            return;
+        }
+        if(distance>400) {
+            zoomLevel=6;
+            return;
+        }
+        if(distance>100) {
+            zoomLevel=7;
+            return;
+        }
+        if(distance>50) {
+            zoomLevel=9;
+            return;
+        }
+        if(distance>10) {
+            zoomLevel=11;
+            return;
+        }
+        if(distance>5) {
+            zoomLevel=12;
+            return;
+        }
+        if(distance>2) {
+            zoomLevel=14;
+            return;
+        }
+        if(distance>1) {
+            zoomLevel=15;
+            return;
+        }
+        if(distance>0.3) {
+            zoomLevel=16;
+            return;
+        }
+        zoomLevel=18;
+    }
+    public void moveCameraToCurrentMarker()
+    {
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(currentPlace.getLatitude(),currentPlace.getLongitude()),zoomLevel));
+    }
+    private String getPlaceUrl(String searchString)
+    {
+        return "https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input="+
+                searchString+"&inputtype=textquery&fields=formatted_address,name,geometry&key="
+                +context.getString(R.string.api_key);
+    }
+    private String getPlaceUrl(double latitude, double longitude)
+    {
+        return "https://maps.googleapis.com/maps/api/geocode/json?latlng="+String.valueOf(latitude)
+                +","+String.valueOf(longitude)+"&key="+context.getString(R.string.api_key);
+    }
+    public void getLocationFromAddress(final OnPostGettingAddressJob onPostGettingAddressJob, String searchString)
+    {
+        String url=getPlaceUrl(searchString);
+        BackgroundJob backgroundJob = new BackgroundJob() {
+            @Override
+            public String getData(String url) {
+                try {
+                    return downloadData(url);
+                } catch (IOException e) {
+                    Log.e("GETTING_PLACE_FAIL",e.getMessage());
+                }
+                return null;
+            }
+
+            @Override
+            public void doOnPostExecute(String result) {
+                DirectionsJSONParser parser=new DirectionsJSONParser();
+                currentPlace= parser.getPlace(result);
+                onPostGettingAddressJob.updateCurrentLocation(currentPlace);
+            }
+        };
+        BackgroundTask task=new BackgroundTask();
+        task.job=backgroundJob;
+        task.execute(url);
     }
 }
