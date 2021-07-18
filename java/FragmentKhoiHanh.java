@@ -84,7 +84,7 @@ public class FragmentKhoiHanh extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        init();
+
     }
 
     @Override
@@ -102,6 +102,7 @@ public class FragmentKhoiHanh extends Fragment {
         btnSetDestinationPoint=view.findViewById(R.id.KhoiHanh_btnSetDestinationPoint);
         btnConfirm=view.findViewById(R.id.KhoiHanh_btnXacNhan);
         mapHelper=fragmentMap.getMapHelper();
+        init();
         View.OnClickListener listener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {

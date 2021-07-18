@@ -81,7 +81,7 @@ public class FragmentDatXe extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
-        initData();
+
     }
 
     @Override
@@ -106,6 +106,7 @@ public class FragmentDatXe extends Fragment {
         mapHelper.setKilometersDisplayingControl(tvKilometer);
 //        fragmentMap.enableKmDisplaying();
         mapHelper.setPricesDisplayingControl(tvPrice);
+        initData();
 //        fragmentMap.enablePriceDisplaying();
         View.OnClickListener listener= new View.OnClickListener() {
             @Override
@@ -165,7 +166,6 @@ public class FragmentDatXe extends Fragment {
                 if(soDu>=tongTien)
                 {
                     //dat chuyen di
-                    Toast.makeText(getContext(),getString(R.string.order_success),Toast.LENGTH_LONG).show();
                     kh.setSoTien(String.valueOf(soDu-tongTien));
                     khHelper.update(khStatus, khKey,kh);
                     String dtKey=getNearestDoiTac();
@@ -176,6 +176,7 @@ public class FragmentDatXe extends Fragment {
                     }
                     updateDTStatus(dtKey,doiTac);
                     createChuyenDi(dtKey);
+                    Toast.makeText(getContext(),getString(R.string.order_success),Toast.LENGTH_LONG).show();
                     return;
                 }
                 Toast.makeText(getContext(), getString(R.string.not_enough_balance),Toast.LENGTH_LONG).show();
@@ -280,7 +281,7 @@ public class FragmentDatXe extends Fragment {
         }
         return key;
     }
-
+    //cập nhật lại vị trí của khách hàng trên database
     private void setKHPlace(Place place)
     {
         kh.setViDoHienTai(String.valueOf(place.getLatitude()));

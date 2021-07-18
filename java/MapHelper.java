@@ -176,7 +176,7 @@ public class MapHelper {
     public void setStartMarker()
     {
         checkpoints[0]=new Place(currentPlace);
-        currentMarker.remove();
+        if(currentMarker!=null)currentMarker.remove();
         if(startMarker!=null) startMarker.remove();
         startMarker=map.addMarker(new MarkerOptions()
                 .position(new LatLng(currentPlace.getLatitude(),currentPlace.getLongitude()))
@@ -185,18 +185,11 @@ public class MapHelper {
         else moveCameraToCurrentMarker();
         reset();
     }
-//    public void setStartMarker(double latitude, double longitude)
-//    {
-//        currentMarker.remove();
-//        if(startMarker!=null) startMarker.remove();
-//        startMarker=map.addMarker(new MarkerOptions().position(new LatLng(latitude,longitude)).title("Diem bat dau"));
-//        if(destinationMarker != null) drawRoute();
-//        reset();
-//    }
+
     public void setDestinationMarker()
     {
         checkpoints[1]=new Place(currentPlace);
-        currentMarker.remove();
+        if(currentMarker!=null)currentMarker.remove();
         if(destinationMarker!=null) destinationMarker.remove();
         destinationMarker=map.addMarker(new MarkerOptions()
                 .position(new LatLng(currentPlace.getLatitude(),currentPlace.getLongitude()))
@@ -205,14 +198,6 @@ public class MapHelper {
         else moveCameraToCurrentMarker();
         reset();
     }
-//    public void setDestinationMarker(double latitude, double longitude)
-//    {
-//        currentMarker.remove();
-//        if(destinationMarker!=null) destinationMarker.remove();
-//        destinationMarker=map.addMarker(new MarkerOptions().position(new LatLng(latitude,longitude)).title("Diem den"));
-//        if(startMarker != null) drawRoute();
-//        reset();
-//    }
 
     public void drawRoute()
     {
@@ -291,7 +276,7 @@ public class MapHelper {
     {
         void updateCurrentLocation(Place place);
     }
-    //a class to download data in background
+    //a class to do a job(most likely a download job) ịn the background
     private class BackgroundTask extends AsyncTask<String, Void, String> {
         public BackgroundJob job;
         @Override
@@ -303,7 +288,6 @@ public class MapHelper {
 
             try{
                 // Fetching the data from web service
-//                data = getRouteData(url[0]);
                 data=job.getData(url[0]);
             }catch(Exception e){
                 Log.d("Background Task",e.toString());
@@ -316,11 +300,6 @@ public class MapHelper {
         @Override
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
-//
-//            MapHelper.ParserTask parserTask = new MapHelper.ParserTask();
-//
-//            // Invokes the thread for parsing the JSON data
-//            parserTask.execute(result);
             job.doOnPostExecute(result);
         }
     }

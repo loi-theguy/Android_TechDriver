@@ -86,7 +86,6 @@ public class FragmentTaiXeDenKhachHang extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        init();
     }
 
     @Override
@@ -105,6 +104,7 @@ public class FragmentTaiXeDenKhachHang extends Fragment {
         btnSetDestinationPoint=view.findViewById(R.id.TXKH_btnSetDestinationPoint);
         btnGo=view.findViewById(R.id.KhoiHanh_btnGo);
         mapHelper= fragmentMap.getMapHelper();
+        init();
         View.OnClickListener listener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -167,7 +167,7 @@ public class FragmentTaiXeDenKhachHang extends Fragment {
     private void init()
     {
         dtKey="-Mcd50fHM85Zg10vEfc9";
-        cdKey="-McnW4k3g97pFb6REnhe";
+        cdKey="-MeZfrCQvLF_xtdsE4wZ";
         dtHelper=new DoiTacDBHelper();
         dtStatus=new DatabaseStatus<DoiTac>() {
             @Override
@@ -212,7 +212,6 @@ public class FragmentTaiXeDenKhachHang extends Fragment {
                         Place destination= new Place(Double.valueOf(cd.getViDoDiemBatDau()),Double.valueOf(cd.getKinhDoDiemBatDau()),cd.getDiemBatDau());
                         mapHelper.setCurrentPlace(destination);
                         mapHelper.setDestinationMarker();
-                        mapHelper.moveCameraToCurrentMarker();
                         etDestinationPos.setText(cd.getDiemBatDau());
                         return;
                     }
